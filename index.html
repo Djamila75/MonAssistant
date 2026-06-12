@@ -736,6 +736,7 @@ function confirmSched(){
 }
 
 // ===== PDF =====
+function openPdfModal(){document.getElementById("pdfModal").style.display="flex";}
 function selPdf(v){pdfOpt=v;["day","week","full"].forEach(o=>document.getElementById("pdfOpt"+o.charAt(0).toUpperCase()+o.slice(1)).classList.toggle("sel",o===v));}
 function exportPDF(){
   if(!window.jspdf||!window.jspdf.jsPDF){
