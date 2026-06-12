@@ -774,11 +774,18 @@ function exportPDF(){
     doc.setTextColor(255,255,255);doc.setFontSize(7);doc.setFont("helvetica","bold");
     doc.text(t.context,M+4,y2+5.8);
     let tx=M+2+ctxW+3;
-    // Time
+    // Time + Date
     if(t.scheduledTime){
       doc.setTextColor(43,108,176);doc.setFontSize(8);doc.setFont("helvetica","bold");
       doc.text(t.scheduledTime,tx,y2+6);
-      tx+=doc.getTextWidth("⏰ "+t.scheduledTime)+4;
+      tx+=doc.getTextWidth(t.scheduledTime)+4;
+    }
+    if(t.scheduledDate){
+      const dp=t.scheduledDate.split("-");
+      const dateLabel=dp[2]+"/"+dp[1]+"/"+dp[0].slice(2);
+      doc.setTextColor(39,103,73);doc.setFontSize(7.5);doc.setFont("helvetica","normal");
+      doc.text(dateLabel,tx,y2+6);
+      tx+=doc.getTextWidth(dateLabel)+4;
     }
     // Title
     doc.setTextColor(26,32,44);doc.setFontSize(9.5);doc.setFont("helvetica","normal");
