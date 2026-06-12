@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Assistant">
+<meta name="theme-color" content="#1A202C">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>Mon Assistant — Djamila</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',system-ui,sans-serif;background:#F0F2F7;min-height:100vh;color:#1A202C;padding-bottom:calc(60px + env(safe-area-inset-bottom))}
+
+/* NAV BOTTOM mobile-first */
+.nav{background:#1A202C;display:flex;justify-content:space-around;position:fixed;bottom:0;left:0;right:0;z-index:100;border-top:1px solid #2D3748;padding-bottom:env(safe-area-inset-bottom)}
+.nav-btn{flex:1;padding:10px 4px 8px;background:none;border:none;color:#718096;font-size:9px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:3px;border-top:2px solid transparent}
+.nav-btn.active{color:#667eea;border-top-color:#667eea}
+.nav-icon{font-size:18px;line-height:1}
+
+/* HEADER */
+.header{background:linear-gradient(135deg,#1A202C,#2D3748);color:#fff;padding:14px 14px 0}
+.header-date{font-size:10px;color:#A0AEC0;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px}
+.header-title{font-size:18px;font-weight:900;margin-bottom:2px}
+.header-sub{font-size:12px;color:#CBD5E0;margin-bottom:12px}
+.header-actions{display:flex;gap:6px;margin-bottom:0}
+.btn-plan{flex:1;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;border-radius:8px;padding:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+.btn-pdf{flex:1;background:#2D3748;color:#CBD5E0;border:1px solid #4A5568;border-radius:8px;padding:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+.stats-bar{display:flex;gap:2px;margin-top:10px;border-radius:6px 6px 0 0;overflow:hidden;height:22px}
+.stats-seg{display:flex;align-items:center;padding:0 8px;font-size:10px;font-weight:700;color:rgba(255,255,255,.9)}
+.view-tabs{display:flex;margin-top:6px}
+.vtab{padding:8px 12px;background:none;border:none;border-bottom:2px solid transparent;color:#A0AEC0;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit}
+.vtab.active{color:#fff;border-bottom-color:#667eea}
+
+/* PAGES */
+.page{display:none}.page.active{display:block}
+.content{max-width:720px;margin:0 auto;padding:12px}
+
+/* FILTERS */
+.filters{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px;overflow-x:auto;padding-bottom:4px}
+.filter-btn{padding:5px 12px;border-radius:20px;border:2px solid #E2E8F0;background:#fff;color:#718096;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0}
+.filter-btn.active{color:#fff}
+
+/* ADD BTN */
+.add-btn{width:100%;padding:14px;background:#fff;border:2px dashed #CBD5E0;border-radius:12px;font-size:13px;color:#A0AEC0;cursor:pointer;margin-bottom:14px;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px}
+
+/* TASK CARD — bigger touch targets */
+.task-card{background:#fff;border:1.5px solid #E2E8F0;border-radius:12px;padding:12px;margin-bottom:8px;display:flex;align-items:flex-start;gap:10px;transition:all .15s;position:relative}
+.task-card.done{opacity:.5}
+.task-check{width:20px;height:20px;cursor:pointer;flex-shrink:0;margin-top:1px;accent-color:#667eea}
+.task-body{flex:1;min-width:0}
+.task-title-text{font-size:14px;font-weight:600;color:#1A202C;line-height:1.4;margin-bottom:4px}
+.task-title-text.done-text{text-decoration:line-through;color:#A0AEC0}
+.task-badges{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
+.badge-ctx{font-size:10px;font-weight:700;border-radius:4px;padding:2px 7px;color:#fff}
+.badge-q{font-size:10px;font-weight:700;border-radius:4px;padding:2px 7px}
+.badge-time{font-size:10px;font-weight:700;color:#667eea;background:#EBF8FF;border-radius:4px;padding:2px 7px}
+.badge-date{font-size:10px;font-weight:700;color:#276749;background:#F0FFF4;border-radius:4px;padding:2px 7px}
+.task-notes-text{font-size:11px;color:#718096;margin-top:4px;line-height:1.4}
+.task-actions{display:flex;flex-direction:column;gap:4px;flex-shrink:0}
+.btn-edit{background:#EBF8FF;border:none;border-radius:6px;padding:5px 8px;font-size:11px;font-weight:700;color:#2B6CB0;cursor:pointer;font-family:inherit;white-space:nowrap}
+.btn-del{background:#FFF5F5;border:none;border-radius:6px;padding:5px 8px;font-size:11px;font-weight:700;color:#E53E3E;cursor:pointer;font-family:inherit}
+
+/* MATRICE */
+.matrix{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.quadrant{background:#fff;border-radius:12px;border:2px solid;overflow:hidden}
+.q-header{padding:8px 10px;border-bottom:1px solid}
+.q-label{font-size:11px;font-weight:800}
+.q-count{font-size:10px;color:#A0AEC0;margin-top:1px}
+.q-body{padding:6px 6px 2px;min-height:32px}
+.q-empty{font-size:11px;color:#CBD5E0;text-align:center;padding:8px 0}
+.q-chip{border-radius:7px;padding:5px 7px;margin-bottom:4px;font-size:11px;font-weight:600;line-height:1.3;cursor:pointer;border:1px solid transparent;display:block}
+
+/* VUE AUJOURD'HUI */
+.today-section{background:#fff;border-radius:12px;border:1.5px solid #E2E8F0;overflow:hidden;margin-bottom:12px}
+.today-section-header{padding:10px 14px;font-size:12px;font-weight:800;display:flex;align-items:center;gap:6px}
+.today-empty{font-size:12px;color:#A0AEC0;text-align:center;padding:12px}
+
+/* AGENDA */
+.agenda-wrap{max-width:720px;margin:0 auto;padding:12px}
+.agenda-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;background:#fff;border-radius:10px;padding:10px 12px;border:1.5px solid #E2E8F0}
+.agenda-nav-title{font-size:12px;font-weight:800;color:#1A202C;text-align:center}
+.agenda-nav-btn{background:none;border:1.5px solid #E2E8F0;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:12px;font-family:inherit;color:#4A5568}
+.week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:8px}
+.day-col{background:#fff;border-radius:8px;border:1.5px solid #E2E8F0;min-height:90px;overflow:hidden}
+.day-col.today{border-color:#667eea;border-width:2px}
+.day-header{padding:5px 3px;text-align:center;border-bottom:1px solid #E2E8F0}
+.day-name{font-size:8px;font-weight:700;color:#A0AEC0;text-transform:uppercase}
+.day-num{font-size:13px;font-weight:900;color:#1A202C}
+.day-col.today .day-num{color:#667eea}
+.day-tasks{padding:3px}
+.day-chip{border-radius:4px;padding:2px 3px;margin-bottom:2px;font-size:8px;font-weight:700;line-height:1.3;cursor:pointer;display:block;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.day-add{width:100%;padding:2px;background:none;border:1px dashed #E2E8F0;border-radius:3px;font-size:8px;color:#CBD5E0;cursor:pointer;font-family:inherit;margin-top:2px}
+.unsched-wrap{background:#fff;border-radius:10px;border:1.5px solid #E2E8F0;padding:10px;margin-top:8px}
+.unsched-task{display:flex;align-items:center;gap:8px;padding:8px 10px;background:#F7F8FC;border-radius:8px;margin-bottom:6px;border:1.5px solid #E2E8F0}
+.unsched-title{font-size:12px;font-weight:600;color:#2D3748;flex:1}
+.badge-ctx-sm{font-size:9px;font-weight:700;border-radius:3px;padding:1px 5px;color:#fff}
+.btn-sched{padding:5px 10px;background:#667eea;color:#fff;border:none;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap}
+
+/* BILAN */
+.bilan-card{background:#fff;border-radius:12px;border:1.5px solid #E2E8F0;padding:16px;margin-bottom:12px}
+.bilan-q{font-size:13px;font-weight:700;color:#2D3748;margin-bottom:8px}
+.bilan-yesno{display:flex;gap:8px}
+.bilan-btn{flex:1;padding:11px;border-radius:8px;border:2px solid #E2E8F0;background:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s}
+.bilan-btn.yes{background:#F0FFF4;border-color:#38A169;color:#276749}
+.bilan-btn.no{background:#FFF5F5;border-color:#E53E3E;color:#C53030}
+.energy-btns{display:flex;gap:5px}
+.energy-btn{flex:1;padding:9px 4px;border-radius:8px;border:2px solid #E2E8F0;background:#fff;font-size:13px;cursor:pointer;font-family:inherit;text-align:center;transition:all .15s}
+.energy-btn.active{background:#EBF8FF;border-color:#667eea}
+.bilan-entry{background:#fff;border-radius:10px;border:1.5px solid #E2E8F0;padding:12px;margin-bottom:7px}
+.bilan-entry-date{font-size:11px;color:#A0AEC0;font-weight:700;margin-bottom:5px}
+.bilan-badges{display:flex;gap:4px;flex-wrap:wrap}
+.bb{font-size:10px;font-weight:700;border-radius:4px;padding:2px 7px}
+.corr-block{background:linear-gradient(135deg,#667eea11,#764ba211);border:1.5px solid #667eea44;border-radius:10px;padding:14px;margin-bottom:12px}
+
+/* JAPANESE */
+.jp-page{max-width:720px;margin:0 auto;padding:12px}
+.jp-progress{display:flex;gap:6px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px}
+.jp-prog-item{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer}
+.jp-prog-dot{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;border:2px solid transparent;transition:all .2s}
+.jp-prog-label{font-size:9px;font-weight:700;text-align:center;max-width:52px;color:#A0AEC0}
+.jp-prog-item.active .jp-prog-label{color:#1A202C}
+.method-card{background:#fff;border-radius:14px;border:2px solid #E2E8F0;overflow:hidden;margin-bottom:14px}
+.method-banner{padding:18px;color:#fff;position:relative;overflow:hidden}
+.method-kanji{font-size:44px;position:absolute;right:12px;top:50%;transform:translateY(-50%);opacity:.2;line-height:1}
+.method-tag{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;opacity:.8;margin-bottom:4px}
+.method-name{font-size:18px;font-weight:900;margin-bottom:3px}
+.method-tagline{font-size:12px;opacity:.85;line-height:1.4}
+.method-body{padding:14px}
+.method-tabs{display:flex;border-bottom:2px solid #E2E8F0;margin-bottom:12px}
+.mtab{padding:7px 12px;background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;color:#A0AEC0;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
+.mtab.active{color:#667eea;border-bottom-color:#667eea}
+.method-what{font-size:13px;line-height:1.7;color:#4A5568;margin-bottom:14px}
+.ex-block{background:#F7F8FC;border-radius:10px;padding:12px;margin-bottom:10px}
+.ex-q{font-size:13px;font-weight:700;color:#2D3748;margin-bottom:6px}
+.ex-hint{font-size:11px;color:#A0AEC0;margin-bottom:6px;font-style:italic}
+.ex-ta{width:100%;padding:9px 11px;border:2px solid #E2E8F0;border-radius:8px;font-size:12px;resize:vertical;font-family:inherit;outline:none;line-height:1.6;min-height:68px}
+.ex-ta:focus{border-color:#667eea}
+.btn-reflect{padding:8px 16px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:6px}
+.ai-fb{background:#EBF8FF;border:1.5px solid #63B3ED;border-radius:9px;padding:12px;margin-top:10px;font-size:12px;line-height:1.7;color:#2C5282;white-space:pre-wrap}
+.ikigai-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px}
+.iki-circle{border-radius:10px;padding:10px;text-align:center;border:2px solid}
+.iki-icon{font-size:18px;margin-bottom:3px}
+.iki-title{font-size:10px;font-weight:800;text-transform:uppercase;margin-bottom:2px}
+.iki-q{font-size:11px;color:#718096;line-height:1.3}
+.iki-center{grid-column:span 2;background:linear-gradient(135deg,#667eea22,#764ba222);border:2px solid #667eea;border-radius:10px;padding:10px;text-align:center}
+.kz-habit{background:#F7F8FC;border-radius:9px;padding:11px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start}
+.kz-days{display:flex;gap:3px;margin-top:6px;flex-wrap:wrap}
+.kz-day{width:22px;height:22px;border-radius:4px;border:2px solid #E2E8F0;background:#fff;font-size:9px;display:flex;align-items:center;justify-content:center;font-weight:700}
+.kz-day.done{background:#667eea;border-color:#667eea;color:#fff}
+.pom-ring{width:140px;height:140px;border-radius:50%;border:7px solid #E2E8F0;margin:0 auto 14px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.pom-ring.work{border-color:#E53E3E}
+.pom-ring.brk{border-color:#38A169}
+.pom-time{font-size:30px;font-weight:900;color:#1A202C;line-height:1}
+.pom-label{font-size:11px;color:#A0AEC0;font-weight:600;margin-top:3px}
+.pom-btns{display:flex;gap:7px;justify-content:center;margin-bottom:10px}
+.pom-btn{padding:9px 18px;border-radius:8px;border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+.pom-start{background:#E53E3E;color:#fff}
+.pom-reset{background:#EDF2F7;color:#718096}
+.pom-sess{display:flex;gap:5px;justify-content:center}
+.pom-t{font-size:18px;opacity:.3}
+.pom-t.done{opacity:1}
+.wabi-entry{background:#FFFFF0;border:1.5px solid #F6E05E;border-radius:9px;padding:11px;margin-bottom:6px}
+.haru-m{margin-bottom:11px}
+.haru-ml{display:flex;justify-content:space-between;font-size:12px;color:#718096;margin-bottom:4px}
+.haru-mt{height:8px;background:#E2E8F0;border-radius:8px;overflow:hidden}
+.haru-mf{height:100%;border-radius:8px;transition:width .4s}
+
+/* MODALS */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:300;display:flex;align-items:flex-end;justify-content:center}
+.modal{background:#fff;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:0 -10px 40px rgba(0,0,0,.2)}
+.modal-handle{width:36px;height:4px;background:#E2E8F0;border-radius:2px;margin:0 auto 16px}
+.modal-title{font-size:17px;font-weight:800;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}
+.modal-close{background:none;border:none;font-size:22px;cursor:pointer;color:#A0AEC0;font-family:inherit;line-height:1}
+.form-label{font-size:12px;font-weight:700;color:#4A5568;margin-bottom:4px;display:block;margin-top:10px}
+.form-input{width:100%;padding:11px 13px;border:2px solid #E2E8F0;border-radius:10px;font-size:15px;font-family:inherit;outline:none;transition:border-color .15s}
+.form-input:focus{border-color:#667eea}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.form-ta{width:100%;padding:10px 12px;border:2px solid #E2E8F0;border-radius:10px;font-size:13px;resize:vertical;font-family:inherit;outline:none;margin-top:10px}
+.form-ta:focus{border-color:#667eea}
+.ctx-row{display:flex;gap:5px;flex-wrap:wrap;margin-top:10px}
+.ctx-btn{padding:6px 12px;border-radius:7px;border:2px solid #E2E8F0;background:#fff;color:#718096;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s}
+.qgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}
+.qbtn{padding:9px 8px;border:2px solid;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;text-align:left;font-family:inherit;line-height:1.4;transition:all .15s}
+.btn-ai-classify{width:100%;padding:12px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:12px}
+.btn-ai-classify:disabled{background:#EDF2F7;color:#A0AEC0;cursor:not-allowed}
+.btn-save{width:100%;padding:13px;background:#1A202C;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:10px}
+.btn-save:disabled{background:#EDF2F7;color:#A0AEC0;cursor:not-allowed}
+.ai-suggestion{border:1.5px solid;border-radius:10px;padding:12px;margin-top:10px}
+
+/* PDF modal */
+.pdf-opt{background:#F7F8FC;border-radius:10px;padding:12px;margin-bottom:8px;cursor:pointer;border:2px solid transparent;transition:all .15s}
+.pdf-opt.sel{border-color:#667eea;background:#EBF8FF}
+.pdf-opt-title{font-size:13px;font-weight:700;color:#2D3748;margin-bottom:2px}
+.pdf-opt-desc{font-size:11px;color:#718096}
+.btn-export{width:100%;padding:13px;background:linear-gradient(135deg,#E53E3E,#C53030);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:4px}
+
+/* Plan */
+.plan-content{font-size:13px;line-height:1.8;color:#2D3748;white-space:pre-wrap}
+
+/* Sched modal */
+.sched-day-btn{padding:7px 10px;border-radius:7px;border:2px solid #E2E8F0;background:#fff;color:#4A5568;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s}
+.sched-day-btn.active{background:#667eea;border-color:#667eea;color:#fff}
+
+/* List section */
+.section-title{font-size:11px;font-weight:700;color:#718096;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;margin-top:16px}
+.empty-state{text-align:center;padding:48px 20px;color:#A0AEC0}
+.empty-icon{font-size:44px;margin-bottom:10px}
+.empty-title{font-size:15px;font-weight:600;color:#4A5568;margin-bottom:6px}
+
+@media(min-width:600px){
+  .nav{position:sticky;top:0;bottom:auto;border-top:none;border-bottom:1px solid #2D3748;flex-direction:row;justify-content:center}
+  .nav-btn{flex:none;padding:13px 20px;border-top:none;border-bottom:2px solid transparent;flex-direction:row;gap:6px}
+  .nav-btn.active{border-bottom-color:#667eea;border-top-color:transparent}
+  .nav-icon{font-size:14px}
+  body{padding-bottom:0}
+  .modal{border-radius:16px;margin:auto;align-self:center}
+  .modal-overlay{align-items:center}
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <button class="nav-btn active" onclick="showPage('tasks',this)"><span class="nav-icon">📋</span>Tâches</button>
+  <button class="nav-btn" onclick="showPage('today',this)"><span class="nav-icon">☀️</span>Aujourd'hui</button>
+  <button class="nav-btn" onclick="showPage('agenda',this)"><span class="nav-icon">📅</span>Agenda</button>
+  <button class="nav-btn" onclick="showPage('bilan',this)"><span class="nav-icon">🌙</span>Bilan</button>
+  <button class="nav-btn" onclick="showPage('japanese',this)"><span class="nav-icon">🌸</span>Méthodes</button>
+</nav>
+
+<!-- PAGE TÂCHES -->
+<div id="page-tasks" class="page active">
+  <div class="header">
+    <div class="header-date" id="headerDate"></div>
+    <div class="header-title">Bonjour Djamila 👋</div>
+    <div class="header-sub" id="headerSub">…</div>
+    <div class="header-actions">
+      <button class="btn-plan" onclick="openPlan()">✨ Planifier ma journée</button>
+      <button class="btn-pdf" onclick="openPdfModal()">📄 PDF</button>
+    </div>
+    <div class="stats-bar" id="statsBar"></div>
+    <div class="view-tabs">
+      <button class="vtab active" id="vtabMatrix" onclick="setView('matrix')">🧭 Matrice</button>
+      <button class="vtab" id="vtabList" onclick="setView('list')">📋 Liste</button>
+    </div>
+  </div>
+  <div class="content">
+    <div class="filters" id="filters"></div>
+    <button class="add-btn" onclick="openAdd()"><span style="font-size:18px">＋</span> Ajouter une tâche</button>
+    <div id="mainView"></div>
+  </div>
+</div>
+
+<!-- PAGE AUJOURD'HUI -->
+<div id="page-today" class="page">
+  <div class="header">
+    <div class="header-date" id="todayDateLabel"></div>
+    <div class="header-title">☀️ Aujourd'hui</div>
+    <div class="header-sub" id="todaySub">Tes tâches du jour par priorité</div>
+    <div style="height:14px"></div>
+  </div>
+  <div class="content">
+    <button class="add-btn" onclick="openAdd(todayKey())"><span style="font-size:18px">＋</span> Ajouter une tâche pour aujourd'hui</button>
+    <div id="todayView"></div>
+  </div>
+</div>
+
+<!-- PAGE AGENDA -->
+<div id="page-agenda" class="page">
+  <div class="agenda-wrap">
+    <div class="agenda-nav">
+      <button class="agenda-nav-btn" onclick="changeWeek(-1)">← Préc.</button>
+      <div class="agenda-nav-title" id="agendaTitle"></div>
+      <button class="agenda-nav-btn" onclick="changeWeek(1)">Suiv. →</button>
+    </div>
+    <div class="week-grid" id="weekGrid"></div>
+    <div class="unsched-wrap">
+      <div style="font-size:12px;font-weight:700;color:#718096;margin-bottom:8px">📌 Sans date — à planifier</div>
+      <div id="unscheduledList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE BILAN -->
+<div id="page-bilan" class="page">
+  <div class="header">
+    <div class="header-date" id="bilanDateHeader"></div>
+    <div class="header-title">🌙 Bilan de journée</div>
+    <div class="header-sub">2 minutes · chaque soir</div>
+    <div style="height:14px"></div>
+  </div>
+  <div class="content" style="max-width:520px">
+    <div class="bilan-card">
+      <div class="bilan-q">1. J'ai accompli au moins UNE chose concrète ?</div>
+      <div class="bilan-yesno">
+        <button class="bilan-btn" id="bAccOui" onclick="setBV('accompli',true)">✅ Oui</button>
+        <button class="bilan-btn" id="bAccNon" onclick="setBV('accompli',false)">❌ Non</button>
+      </div>
+    </div>
+    <div class="bilan-card">
+      <div class="bilan-q">2. Mon niveau d'énergie ce soir ?</div>
+      <div class="energy-btns">
+        <button class="energy-btn" id="be1" onclick="setBV('energie',1)">😴</button>
+        <button class="energy-btn" id="be2" onclick="setBV('energie',2)">😔</button>
+        <button class="energy-btn" id="be3" onclick="setBV('energie',3)">😐</button>
+        <button class="energy-btn" id="be4" onclick="setBV('energie',4)">😊</button>
+        <button class="energy-btn" id="be5" onclick="setBV('energie',5)">🤩</button>
+      </div>
+    </div>
+    <div class="bilan-card">
+      <div class="bilan-q">3. J'ai envie de sucre / grignoter ?</div>
+      <div class="bilan-yesno">
+        <button class="bilan-btn" id="bSucOui" onclick="setBV('sucre',true)">🍬 Oui</button>
+        <button class="bilan-btn" id="bSucNon" onclick="setBV('sucre',false)">💪 Non</button>
+      </div>
+    </div>
+    <div class="bilan-card">
+      <div class="bilan-q">4. Ce soir je ressens… <span style="font-weight:400;color:#A0AEC0;font-size:12px">(optionnel)</span></div>
+      <textarea id="bilanNote" class="form-ta" placeholder="Ex: fatiguée, frustrée, fière d'avoir avancé..." rows="2" style="margin-top:8px"></textarea>
+    </div>
+    <button id="btnSaveBilan" onclick="saveBilan()" style="width:100%;padding:13px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:12px">Enregistrer mon bilan</button>
+    <div id="bilanAIResult"></div>
+    <div id="bilanHistorique"></div>
+  </div>
+</div>
+
+<!-- PAGE MÉTHODES -->
+<div id="page-japanese" class="page">
+  <div class="jp-page">
+    <div style="background:linear-gradient(135deg,#1A202C,#2D3748);color:#fff;border-radius:14px;padding:18px;margin-bottom:14px;text-align:center">
+      <div style="font-size:20px;font-weight:900;margin-bottom:4px">🌸 Sagesse japonaise</div>
+      <div style="font-size:12px;color:#CBD5E0;line-height:1.5">5 philosophies pour avancer sereinement</div>
+    </div>
+    <div class="jp-progress" id="jpProgress"></div>
+    <div id="methodsContainer"></div>
+  </div>
+</div>
+
+<!-- MODAL TÂCHE -->
+<div class="modal-overlay" id="taskModal" style="display:none">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">
+      <span id="taskModalTitle">➕ Nouvelle tâche</span>
+      <button class="modal-close" onclick="closeTaskModal()">×</button>
+    </div>
+    <label class="form-label">Tâche *</label>
+    <input class="form-input" id="taskTitle" placeholder="Décris ta tâche..."/>
+    <div class="ctx-row" id="ctxBtns"></div>
+    <div class="form-row">
+      <div><label class="form-label">📅 Date</label><input class="form-input" id="taskDate" type="date" style="margin-top:4px"/></div>
+      <div><label class="form-label">⏰ Heure</label><input class="form-input" id="taskTime" type="time" style="margin-top:4px"/></div>
+    </div>
+    <label class="form-label">Notes</label>
+    <textarea class="form-ta" id="taskNotes" placeholder="Détails..." rows="2"></textarea>
+    <button class="btn-ai-classify" id="btnAI" onclick="classifyAI()">✨ Classer avec l'IA</button>
+    <div id="aiResult"></div>
+    <div id="manualGrid"></div>
+    <button class="btn-save" id="btnSaveTask" onclick="commitTask()" disabled>Enregistrer</button>
+  </div>
+</div>
+
+<!-- MODAL PLAN -->
+<div class="modal-overlay" id="planModal" style="display:none">
+  <div class="modal" style="max-width:580px">
+    <div class="modal-handle"></div>
+    <div class="modal-title">
+      <span>📅 Mon plan de journée</span>
+      <button class="modal-close" onclick="document.getElementById('planModal').style.display='none'">×</button>
+    </div>
+    <div id="planContent"></div>
+  </div>
+</div>
+
+<!-- MODAL PDF -->
+<div class="modal-overlay" id="pdfModal" style="display:none">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">
+      <span>📄 Exporter en PDF</span>
+      <button class="modal-close" onclick="document.getElementById('pdfModal').style.display='none'">×</button>
+    </div>
+    <div id="pdfOptDay" class="pdf-opt sel" onclick="selPdf('day')"><div class="pdf-opt-title">☀️ Planning du jour</div><div class="pdf-opt-desc">Tâches d'aujourd'hui par ordre de priorité</div></div>
+    <div id="pdfOptWeek" class="pdf-opt" onclick="selPdf('week')"><div class="pdf-opt-title">📆 Planning de la semaine</div><div class="pdf-opt-desc">Toutes les tâches en cours avec horaires</div></div>
+    <div id="pdfOptFull" class="pdf-opt" onclick="selPdf('full')"><div class="pdf-opt-title">📋 Toutes les tâches</div><div class="pdf-opt-desc">Liste complète faites et à faire</div></div>
+    <label class="form-label">Note personnalisée</label>
+    <textarea class="form-ta" id="pdfNote" rows="2" placeholder="Ex: Semaine du 11 juin..." style="margin-top:4px"></textarea>
+    <button class="btn-export" onclick="exportPDF()">⬇️ Télécharger le PDF</button>
+  </div>
+</div>
+
+<!-- MODAL PLANIFIER TÂCHE -->
+<div class="modal-overlay" id="schedModal" style="display:none">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-handle"></div>
+    <div class="modal-title">
+      <span>📅 Planifier</span>
+      <button class="modal-close" onclick="document.getElementById('schedModal').style.display='none'">×</button>
+    </div>
+    <div id="schedTaskName" style="font-size:13px;font-weight:700;color:#2D3748;margin-bottom:12px;padding:10px;background:#F7F8FC;border-radius:8px"></div>
+    <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px" id="schedDayBtns"></div>
+    <label class="form-label">⏰ Heure</label>
+    <input class="form-input" id="schedTime" type="time" value="09:00" style="margin-top:4px"/>
+    <button class="btn-save" onclick="confirmSched()" style="margin-top:12px">Planifier</button>
+  </div>
+</div>
+
+<script>
+// ===== CONSTANTS =====
+const Q={
+  Q1:{label:"Urgent & Important",emoji:"🔥",color:"#E53E3E",bg:"#FFF5F5",border:"#FC8181",desc:"Faire maintenant",order:1},
+  Q2:{label:"Important, pas urgent",emoji:"🎯",color:"#2B6CB0",bg:"#EBF8FF",border:"#63B3ED",desc:"Planifier",order:2},
+  Q3:{label:"Urgent, pas important",emoji:"⚡",color:"#D69E2E",bg:"#FFFFF0",border:"#F6E05E",desc:"Déléguer",order:3},
+  Q4:{label:"Pas urgent ni important",emoji:"🗑️",color:"#718096",bg:"#F7FAFC",border:"#CBD5E0",desc:"Éliminer",order:4}
+};
+const CTX=["Pro","Perso","SIIK","TopFind","Maison"];
+const CC={Pro:"#553C9A",Perso:"#2C7A7B",SIIK:"#C05621",TopFind:"#276749",Maison:"#2A4365"};
+const DFR=["Dim","Lun","Mar","Mer","Jeu","Ven","Sam"];
+const MFR=["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
+const METHODS=[
+  {id:"ikigai",name:"Ikigai",kanji:"生き甲斐",tagline:"Ta raison d'être",color:"#E53E3E",gradient:"linear-gradient(135deg,#C53030,#E53E3E)",emoji:"🌸",what:"L'ikigai est l'intersection de ce que tu aimes, ce en quoi tu es douée, ce dont le monde a besoin et ce pour quoi on peut te payer. Trouver son ikigai c'est aligner son énergie sur ce qui a du sens."},
+  {id:"kaizen",name:"Kaizen",kanji:"改善",tagline:"1% mieux chaque jour",color:"#38A169",gradient:"linear-gradient(135deg,#276749,#38A169)",emoji:"🌱",what:"Kaizen : « changement pour le mieux ». Une amélioration minuscule chaque jour. En un an, 1% par jour = 37x mieux. Rendre le changement si petit qu'il est impossible d'échouer."},
+  {id:"pomodoro",name:"Pomodoro",kanji:"集中",tagline:"25 minutes de focus total",color:"#C53030",gradient:"linear-gradient(135deg,#9B2C2C,#C53030)",emoji:"🍅",what:"25 minutes de focus total, 5 minutes de pause obligatoire. Après 4 sessions, longue pause. Le cerveau fonctionne mieux en sprints rythmés qu'en marathon épuisant."},
+  {id:"wabi",name:"Wabi-sabi",kanji:"侘寂",tagline:"Publier plutôt que perfectionner",color:"#D69E2E",gradient:"linear-gradient(135deg,#975A16,#D69E2E)",emoji:"🍂",what:"L'art d'apprécier l'imperfection. Le fait imparfait vaut infiniment mieux que le projet parfait jamais lancé. Chaque erreur est une trace de vie, pas un échec."},
+  {id:"hara",name:"Hara Hachi Bu",kanji:"腹八分目",tagline:"L'équilibre à 80%",color:"#667eea",gradient:"linear-gradient(135deg,#3C366B,#667eea)",emoji:"⚖️",what:"Agir jusqu'à 80% de sa capacité. Ne jamais se vider totalement. La durabilité vient du 80% conscient — sur ton agenda, ton énergie, tes engagements."}
+];
+
+// ===== STATE =====
+let tasks=[], view="matrix", filter="all", selCtx="Pro", selQ=null, pdfOpt="day";
+let editId=null, weekOff=0, schedId=null, schedDay=null;
+let bilan={accompli:null,energie:null,sucre:null};
+let jp={activeMethod:"ikigai",tab:{},iki:{love:"",good:"",need:"",paid:""},habits:[
+  {id:"h1",name:"1 action SIIK",desc:"Une tâche concrète sur SIIK",days:[]},
+  {id:"h2",name:"1 action TopFind",desc:"Une tâche concrète sur TopFind",days:[]},
+  {id:"h3",name:"10min apprentissage",desc:"Lire, écouter, apprendre",days:[]}
+],pom:{running:false,work:true,sec:25*60,sess:0,iv:null},wabi:[],haru:{
+  travail:{name:"Travail",icon:"💼",v:70},perso:{name:"Personnel",icon:"🌿",v:60},
+  social:{name:"Social",icon:"👥",v:50},sante:{name:"Santé",icon:"💪",v:65},
+  crea:{name:"Créativité",icon:"🎨",v:75},repos:{name:"Repos",icon:"😴",v:45}
+}};
+
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+function todayKey(){return new Date().toISOString().slice(0,10);}
+function dk(d){return d.toISOString().slice(0,10);}
+
+function load(){
+  try{
+    tasks=JSON.parse(localStorage.getItem("dj_t6")||"[]");
+    const s=JSON.parse(localStorage.getItem("dj_j6")||"{}");
+    if(s.iki)jp.iki=s.iki;
+    if(s.habits)jp.habits=s.habits;
+    if(s.wabi)jp.wabi=s.wabi;
+    if(s.haru)jp.haru=s.haru;
+    if(s.activeMethod)jp.activeMethod=s.activeMethod;
+  }catch(e){tasks=[];}
+}
+function save(){
+  try{
+    localStorage.setItem("dj_t6",JSON.stringify(tasks));
+    localStorage.setItem("dj_j6",JSON.stringify({iki:jp.iki,habits:jp.habits,wabi:jp.wabi,haru:jp.haru,activeMethod:jp.activeMethod}));
+  }catch(e){}
+}
+load();
+
+// ===== NAV =====
+function showPage(p,btn){
+  document.querySelectorAll(".page").forEach(el=>el.classList.remove("active"));
+  document.querySelectorAll(".nav-btn").forEach(el=>el.classList.remove("active"));
+  document.getElementById("page-"+p).classList.add("active");
+  btn.classList.add("active");
+  if(p==="tasks")renderAll();
+  else if(p==="today")renderToday();
+  else if(p==="agenda")renderAgenda();
+  else if(p==="bilan")loadBilan();
+  else if(p==="japanese")renderJP();
+}
+
+// ===== HEADER =====
+function renderHeader(){
+  const d=new Date(),ds=d.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
+  const cap=ds.charAt(0).toUpperCase()+ds.slice(1);
+  const hd=document.getElementById("headerDate");if(hd)hd.textContent=cap;
+  const tl=document.getElementById("todayDateLabel");if(tl)tl.textContent=cap;
+  const bh=document.getElementById("bilanDateHeader");if(bh)bh.textContent=cap;
+  const p=tasks.filter(t=>!t.done).length;
+  const hs=document.getElementById("headerSub");if(hs)hs.textContent=p===0?"Tout est à jour ! 🎉":p+" tâche"+(p>1?"s":"")+" en attente";
+  const bar=document.getElementById("statsBar");
+  if(bar){bar.innerHTML="";Object.entries(Q).forEach(([k,q])=>{const c=tasks.filter(t=>t.quadrant===k&&!t.done).length;if(c>0){const s=document.createElement("div");s.className="stats-seg";s.style.cssText="background:"+q.color+";flex:"+c;s.textContent=c;bar.appendChild(s);}});}
+}
+
+// ===== FILTERS =====
+function renderFilters(){
+  const el=document.getElementById("filters");if(!el)return;el.innerHTML="";
+  const mk=(l,v,c)=>{const b=document.createElement("button");b.className="filter-btn"+(filter===v?" active":"");b.textContent=l;if(filter===v&&c){b.style.background=c;b.style.borderColor=c;b.style.color="#fff";}b.onclick=()=>{filter=v;renderFilters();renderView();};el.appendChild(b);};
+  mk("Tous","all","#1A202C");CTX.forEach(c=>mk(c,c,CC[c]));
+}
+
+// ===== TASK VIEWS =====
+function renderAll(){renderHeader();renderFilters();renderView();}
+function setView(v){view=v;document.getElementById("vtabMatrix").className="vtab"+(v==="matrix"?" active":"");document.getElementById("vtabList").className="vtab"+(v==="list"?" active":"");renderView();}
+function filtered(){return filter==="all"?tasks:tasks.filter(t=>t.context===filter);}
+
+function renderView(){
+  renderHeader();
+  const el=document.getElementById("mainView");if(!el)return;
+  const all=filtered(),pending=all.filter(t=>!t.done),done=all.filter(t=>t.done);
+  if(!all.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">✨</div><div class="empty-title">Pas encore de tâches</div><div>Commence par ajouter ta première tâche</div></div>';return;}
+  if(view==="matrix"){
+    let h='<div class="matrix">';
+    Object.entries(Q).forEach(([k,q])=>{
+      const qt=pending.filter(t=>t.quadrant===k);
+      h+='<div class="quadrant" style="border-color:'+q.border+'"><div class="q-header" style="background:'+q.bg+';border-color:'+q.border+'"><div class="q-label" style="color:'+q.color+'">'+q.emoji+' '+q.label+'</div><div class="q-count">'+q.desc+' · '+qt.length+'</div></div><div class="q-body">';
+      h+=qt.length?qt.map(t=>'<div class="q-chip" style="background:'+q.bg+';border-color:'+q.border+';color:'+q.color+'" onclick="openEdit('+t.id+')">'+(t.scheduledTime?t.scheduledTime+' ':'')+esc(t.title.length>22?t.title.slice(0,22)+"…":t.title)+'</div>').join(""):'<div class="q-empty">—</div>';
+      h+='</div></div>';
+    });
+    el.innerHTML=h+"</div>";
+  }else{
+    let h="";
+    if(pending.length){h+='<div class="section-title">À faire ('+pending.length+')</div>';pending.forEach(t=>{h+=tCard(t);});}
+    if(done.length){h+='<div class="section-title">Terminé ✓ ('+done.length+')</div>';done.forEach(t=>{h+=tCard(t);});}
+    el.innerHTML=h;
+  }
+}
+
+// Vue Aujourd'hui — triée par ordre de priorité Q1→Q2→Q3→Q4 puis par heure
+function renderToday(){
+  renderHeader();
+  const el=document.getElementById("todayView");if(!el)return;
+  const today=todayKey();
+  // Tâches du jour (scheduled today) + tâches Q1 sans date
+  const todayTasks=tasks.filter(t=>!t.done&&t.scheduledDate===today);
+  const urgentNoDate=tasks.filter(t=>!t.done&&!t.scheduledDate&&t.quadrant==="Q1");
+  const all=[...todayTasks,...urgentNoDate.filter(t=>!todayTasks.find(x=>x.id===t.id))];
+
+  // Sort by quadrant priority then time
+  all.sort((a,b)=>{
+    const qa=Q[a.quadrant]?.order||5,qb=Q[b.quadrant]?.order||5;
+    if(qa!==qb)return qa-qb;
+    return (a.scheduledTime||"99:99")>(b.scheduledTime||"99:99")?1:-1;
+  });
+
+  const done=tasks.filter(t=>t.done&&t.scheduledDate===today);
+  const ts=document.getElementById("todaySub");
+  if(ts)ts.textContent=all.length+" tâche"+(all.length>1?"s":"")+" · "+done.length+" terminée"+(done.length>1?"s":"");
+
+  if(!all.length&&!done.length){
+    el.innerHTML='<div class="empty-state"><div class="empty-icon">🎉</div><div class="empty-title">Rien de prévu aujourd\'hui</div><div>Ajoute des tâches ou planifie depuis l\'Agenda</div></div>';
+    return;
+  }
+
+  // Group by quadrant
+  let h="";
+  ["Q1","Q2","Q3","Q4"].forEach(k=>{
+    const qt=all.filter(t=>t.quadrant===k);
+    if(!qt.length)return;
+    const q=Q[k];
+    h+='<div class="today-section"><div class="today-section-header" style="background:'+q.bg+';color:'+q.color+'">'+q.emoji+' '+q.label+'</div>';
+    qt.forEach(t=>{h+=tCard(t);});
+    h+='</div>';
+  });
+  if(done.length){
+    h+='<div class="section-title">Terminé aujourd\'hui ✓</div>';
+    done.forEach(t=>{h+=tCard(t);});
+  }
+  el.innerHTML=h;
+}
+
+function tCard(t){
+  const q=Q[t.quadrant]||Q.Q2;
+  const timeBadge=t.scheduledTime?'<span class="badge-time">⏰ '+t.scheduledTime+'</span>':"";
+  const dateBadge=t.scheduledDate&&t.scheduledDate!==todayKey()?'<span class="badge-date">📅 '+t.scheduledDate.slice(8)+"/"+t.scheduledDate.slice(5,7)+'</span>':"";
+  const qBadge='<span class="badge-q" style="background:'+q.bg+';color:'+q.color+';border:1px solid '+q.border+'">'+q.emoji+' '+q.label+'</span>';
+  return '<div class="task-card'+(t.done?" done":"")+'" style="border-color:'+(t.done?"#9AE6B4":q.border)+'">'+
+    '<input type="checkbox" class="task-check" '+(t.done?"checked ":"")+'onchange="toggleTask('+t.id+')" style="accent-color:'+q.color+'">'+
+    '<div class="task-body">'+
+      '<div class="task-title-text'+(t.done?" done-text":"")+'">'+(t.done?"✓ ":"")+esc(t.title)+'</div>'+
+      '<div class="task-badges"><span class="badge-ctx" style="background:'+(CC[t.context]||"#555")+'">'+t.context+'</span>'+dateBadge+timeBadge+qBadge+'</div>'+
+      (t.notes?'<div class="task-notes-text">'+esc(t.notes)+'</div>':"")+
+    '</div>'+
+    '<div class="task-actions">'+
+      '<button class="btn-edit" onclick="openEdit('+t.id+')">✏️ Modifier</button>'+
+      '<button class="btn-del" onclick="deleteTask('+t.id+')">🗑</button>'+
+    '</div>'+
+  '</div>';
+}
+
+function toggleTask(id){tasks=tasks.map(t=>t.id===id?Object.assign({},t,{done:!t.done}):t);save();renderAll();if(document.getElementById("page-today").classList.contains("active"))renderToday();}
+function deleteTask(id){if(!confirm("Supprimer cette tâche ?"))return;tasks=tasks.filter(t=>t.id!==id);save();renderAll();renderToday();}
+
+// ===== ADD / EDIT =====
+function openAdd(prefillDate){
+  editId=null;selCtx="Pro";selQ=null;
+  document.getElementById("taskModalTitle").textContent="➕ Nouvelle tâche";
+  document.getElementById("taskTitle").value="";
+  document.getElementById("taskNotes").value="";
+  document.getElementById("taskDate").value=prefillDate||"";
+  document.getElementById("taskTime").value="";
+  document.getElementById("aiResult").innerHTML="";
+  document.getElementById("btnSaveTask").disabled=true;
+  document.getElementById("btnSaveTask").textContent="Enregistrer";
+  renderCtxBtns();renderQGrid();
+  document.getElementById("taskModal").style.display="flex";
+  setTimeout(()=>document.getElementById("taskTitle").focus(),100);
+}
+function openEdit(id){
+  const t=tasks.find(x=>x.id===id);if(!t)return;
+  editId=id;selCtx=t.context;selQ=t.quadrant;
+  document.getElementById("taskModalTitle").textContent="✏️ Modifier la tâche";
+  document.getElementById("taskTitle").value=t.title;
+  document.getElementById("taskNotes").value=t.notes||"";
+  document.getElementById("taskDate").value=t.scheduledDate||"";
+  document.getElementById("taskTime").value=t.scheduledTime||"";
+  document.getElementById("aiResult").innerHTML="";
+  document.getElementById("btnSaveTask").disabled=false;
+  document.getElementById("btnSaveTask").textContent="Enregistrer les modifications";
+  renderCtxBtns();renderQGrid();
+  document.getElementById("taskModal").style.display="flex";
+}
+function closeTaskModal(){document.getElementById("taskModal").style.display="none";editId=null;}
+
+function renderCtxBtns(){
+  const el=document.getElementById("ctxBtns");el.innerHTML="";
+  CTX.forEach(c=>{const b=document.createElement("button");b.className="ctx-btn";b.textContent=c;if(selCtx===c)b.style.cssText="background:"+CC[c]+";border-color:"+CC[c]+";color:#fff";b.onclick=()=>{selCtx=c;renderCtxBtns();};el.appendChild(b);});
+}
+function renderQGrid(){
+  const el=document.getElementById("manualGrid");
+  let h='<div style="font-size:11px;color:#A0AEC0;margin-top:12px;margin-bottom:6px">Quadrant Eisenhower :</div><div class="qgrid">';
+  Object.entries(Q).forEach(([k,q])=>{const a=selQ===k;h+='<button class="qbtn" onclick="selQF(\''+k+'\')" style="background:'+(a?q.color:q.bg)+';border-color:'+(a?q.color:q.border)+';color:'+(a?"#fff":q.color)+'">'+q.emoji+' '+q.label+'<br><span style="font-weight:400;opacity:.8;font-size:9px">'+q.desc+'</span></button>';});
+  el.innerHTML=h+"</div>";
+}
+function selQF(k){selQ=k;renderQGrid();chkSave();}
+function chkSave(){document.getElementById("btnSaveTask").disabled=!document.getElementById("taskTitle").value.trim()||!selQ;}
+document.getElementById("taskTitle").addEventListener("input",chkSave);
+
+async function classifyAI(){
+  const title=document.getElementById("taskTitle").value.trim();if(!title)return;
+  const btn=document.getElementById("btnAI");btn.disabled=true;btn.textContent="⏳ Analyse...";
+  document.getElementById("aiResult").innerHTML="";
+  try{
+    throw new Error("IA_DISABLED");
+    const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:200,messages:[{role:"user",content:"Classe en Eisenhower. Tâche: \""+title+"\". Contexte: "+selCtx+". Réponds UNIQUEMENT JSON: {\"quadrant\":\"Q1 ou Q2 ou Q3 ou Q4\",\"raison\":\"1 phrase\"}"}]})});
+    if(!res.ok)throw new Error("HTTP "+res.status);
+    const data=await res.json();
+    const parsed=JSON.parse((data.content?.[0]?.text||"").replace(/```json|```/g,"").trim());
+    selQ=parsed.quadrant;const q=Q[selQ];
+    document.getElementById("aiResult").innerHTML='<div class="ai-suggestion" style="background:'+q.bg+';border-color:'+q.border+'"><div style="font-weight:700;color:'+q.color+';margin-bottom:4px">'+q.emoji+' '+q.label+'</div><div style="font-size:12px;color:#4A5568">'+esc(parsed.raison)+'</div></div>';
+    renderQGrid();chkSave();
+  }catch(e){
+    document.getElementById("aiResult").innerHTML='<div style="color:#E53E3E;font-size:12px;padding:8px;background:#FFF5F5;border-radius:8px;margin-top:10px">⚠️ Classification IA indisponible — sélectionne manuellement.</div>';
+  }
+  btn.disabled=false;btn.textContent="✨ Classer avec l'IA";
+}
+
+function commitTask(){
+  const title=document.getElementById("taskTitle").value.trim();if(!title||!selQ)return;
+  const sd=document.getElementById("taskDate").value||null;
+  const st=document.getElementById("taskTime").value||null;
+  if(editId){
+    tasks=tasks.map(t=>t.id===editId?Object.assign({},t,{title,context:selCtx,notes:document.getElementById("taskNotes").value.trim(),quadrant:selQ,scheduledDate:sd,scheduledTime:st}):t);
+  }else{
+    tasks.unshift({id:Date.now(),title,context:selCtx,notes:document.getElementById("taskNotes").value.trim(),quadrant:selQ,done:false,createdAt:new Date().toISOString(),scheduledDate:sd,scheduledTime:st});
+  }
+  save();closeTaskModal();renderAll();
+  if(document.getElementById("page-today").classList.contains("active"))renderToday();
+  if(document.getElementById("page-agenda").classList.contains("active"))renderAgenda();
+}
+
+// ===== PLAN =====
+async function openPlan(){
+  document.getElementById("planModal").style.display="flex";
+  const el=document.getElementById("planContent");
+  el.innerHTML='<div style="text-align:center;padding:32px"><div style="font-size:32px;margin-bottom:10px">✨</div><div style="color:#718096">Génération de ton plan...</div></div>';
+  const pending=tasks.filter(t=>!t.done);
+  if(!pending.length){el.innerHTML='<div style="text-align:center;padding:24px;color:#718096">Aucune tâche en cours !</div>';return;}
+  el.innerHTML='<div style="color:#975A16;font-size:13px;padding:14px;background:#FFFFF0;border-radius:10px;border:1.5px solid #F6E05E">⏳ L\'analyse IA sera disponible à partir du 28 juin.<br><br>En attendant, voici ta priorité du jour :<br><strong>Q1 d\'abord → Q2 ensuite → Q3 si possible.</strong></div>';return;
+  try{
+    const res=await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:800,
+        messages:[{role:"user",content:"Coach productivité pour Djamila, auto-entrepreneuse Île-de-France (SIIK=boutique vintage, TopFind=annuaire web).\n\nTâches:\n"+pending.map(t=>"- ["+t.quadrant+"] ["+t.context+"] "+t.title+(t.scheduledTime?" à "+t.scheduledTime:"")).join("\n")+"\n\nPlan de journée réaliste:\n1. Ordre de priorité avec horaires\n2. Technique focus adaptée\n3. Conseil anti-dispersion\n4. Encouragement court\n\nDirect, pratique, max 300 mots."}]})
+    });
+    if(!res.ok)throw new Error("HTTP "+res.status);
+    const data=await res.json();
+    el.innerHTML='<div class="plan-content">'+esc(data.content?.[0]?.text||"")+'</div>';
+  }catch(e){
+    el.innerHTML='<div style="color:#E53E3E;font-size:13px;padding:14px;background:#FFF5F5;border-radius:8px"><strong>Erreur de génération.</strong><br>Vérifie ta connexion.<br><small style="color:#A0AEC0">'+e.message+'</small></div>';
+  }
+}
+
+// ===== AGENDA =====
+function getWeekDates(off){
+  const t=new Date(),dow=t.getDay(),mon=new Date(t);
+  mon.setDate(t.getDate()-((dow+6)%7)+off*7);
+  return Array.from({length:7},(_,i)=>{const d=new Date(mon);d.setDate(mon.getDate()+i);return d;});
+}
+function changeWeek(dir){weekOff+=dir;renderAgenda();}
+function renderAgenda(){
+  const days=getWeekDates(weekOff),tk=todayKey();
+  const f=days[0],l=days[6];
+  document.getElementById("agendaTitle").textContent=f.getDate()+" "+MFR[f.getMonth()]+" — "+l.getDate()+" "+MFR[l.getMonth()]+" "+l.getFullYear();
+  const grid=document.getElementById("weekGrid");grid.innerHTML="";
+  days.forEach(day=>{
+    const key=dk(day),isT=key===tk;
+    const dt=tasks.filter(t=>t.scheduledDate===key&&!t.done).sort((a,b)=>(a.scheduledTime||"")>(b.scheduledTime||"")?1:-1);
+    const col=document.createElement("div");col.className="day-col"+(isT?" today":"");
+    col.innerHTML='<div class="day-header"><div class="day-name">'+DFR[day.getDay()]+'</div><div class="day-num">'+day.getDate()+'</div></div><div class="day-tasks">'+
+      dt.map(t=>{const q=Q[t.quadrant];return'<div class="day-chip" style="background:'+q.bg+';border-color:'+q.border+';color:'+q.color+'" onclick="openEdit('+t.id+')">'+(t.scheduledTime?t.scheduledTime+' ':'')+esc(t.title.length>14?t.title.slice(0,14)+"…":t.title)+'</div>';}).join("")+
+      '<button class="day-add" onclick="openAdd(\''+key+'\')">+</button></div>';
+    grid.appendChild(col);
+  });
+  const unsched=tasks.filter(t=>!t.done&&!t.scheduledDate);
+  const ul=document.getElementById("unscheduledList");
+  ul.innerHTML=unsched.length?unsched.map(t=>'<div class="unsched-task"><span class="unsched-title">'+esc(t.title)+'</span><span class="badge-ctx-sm" style="background:'+(CC[t.context]||"#555")+'">'+t.context+'</span><button class="btn-sched" onclick="openSchedModal('+t.id+')">Planifier</button></div>').join(""):'<div style="font-size:12px;color:#A0AEC0;text-align:center;padding:8px">Toutes les tâches ont une date 🎉</div>';
+}
+function openSchedModal(id){
+  schedId=id;schedDay=null;
+  const t=tasks.find(x=>x.id===id);if(!t)return;
+  document.getElementById("schedTaskName").textContent=t.title;
+  document.getElementById("schedTime").value=t.scheduledTime||"09:00";
+  const days=getWeekDates(weekOff);
+  document.getElementById("schedDayBtns").innerHTML=days.map(d=>'<button class="sched-day-btn'+(t.scheduledDate===dk(d)?" active":"")+'" onclick="selSD(\''+dk(d)+'\',this)">'+DFR[d.getDay()]+" "+d.getDate()+'</button>').join("");
+  if(t.scheduledDate)schedDay=t.scheduledDate;
+  document.getElementById("schedModal").style.display="flex";
+}
+function selSD(key,btn){schedDay=key;document.querySelectorAll(".sched-day-btn").forEach(b=>b.classList.remove("active"));btn.classList.add("active");}
+function confirmSched(){
+  if(!schedId||!schedDay)return;
+  const time=document.getElementById("schedTime").value||null;
+  tasks=tasks.map(t=>t.id!==schedId?t:Object.assign({},t,{scheduledDate:schedDay,scheduledTime:time}));
+  save();document.getElementById("schedModal").style.display="none";renderAgenda();renderAll();
+}
+
+// ===== PDF =====
+function selPdf(v){pdfOpt=v;["day","week","full"].forEach(o=>document.getElementById("pdfOpt"+o.charAt(0).toUpperCase()+o.slice(1)).classList.toggle("sel",o===v));}
+function exportPDF(){
+  if(!window.jspdf||!window.jspdf.jsPDF){
+    alert("Le générateur PDF est en cours de chargement. Réessaie dans quelques secondes.");
+    return;
+  }
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:"portrait",unit:"mm",format:"a4"});
+  const W=210,M=15,CW=W-M*2,today=new Date();
+  const note=document.getElementById("pdfNote").value.trim();
+  const titles={day:"Planning du jour",week:"Planning de la semaine",full:"Toutes les tâches"};
+  const dateStr=today.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+
+  // Header
+  doc.setFillColor(26,32,44);doc.rect(0,0,W,38,"F");
+  doc.setTextColor(255,255,255);doc.setFontSize(16);doc.setFont("helvetica","bold");
+  doc.text("Mon Assistant - Djamila",M,14);
+  doc.setFontSize(10);doc.setFont("helvetica","normal");doc.setTextColor(160,174,192);
+  doc.text(titles[pdfOpt]+" · "+dateStr.charAt(0).toUpperCase()+dateStr.slice(1),M,22);
+  if(note){doc.setFontSize(9);doc.setTextColor(203,213,224);doc.text(note,M,30);}
+  let y=46;
+
+  const hxr=h=>{h=h.replace("#","");if(h.length===3)h=h.split("").map(c=>c+c).join("");return{r:parseInt(h.slice(0,2),16),g:parseInt(h.slice(2,4),16),b:parseInt(h.slice(4,6),16)};};
+
+  const drawTask=(t,y2,showQ)=>{
+    if(y2>272){doc.addPage();y2=M;}
+    const q=Q[t.quadrant],cr=hxr(CC[t.context]||"#555555");
+    // Row background
+    doc.setFillColor(248,249,252);doc.rect(M,y2,CW,9,"F");
+    doc.setDrawColor(230,232,240);doc.rect(M,y2,CW,9,"S");
+    // Context badge
+    doc.setFillColor(cr.r,cr.g,cr.b);
+    const ctxW=doc.getTextWidth(t.context)*0.65+5;
+    doc.rect(M+2,y2+2,ctxW,5,"F");
+    doc.setTextColor(255,255,255);doc.setFontSize(7);doc.setFont("helvetica","bold");
+    doc.text(t.context,M+4,y2+5.8);
+    let tx=M+2+ctxW+3;
+    // Time
+    if(t.scheduledTime){
+      doc.setTextColor(43,108,176);doc.setFontSize(8);doc.setFont("helvetica","bold");
+      doc.text(t.scheduledTime,tx,y2+6);
+      tx+=doc.getTextWidth("⏰ "+t.scheduledTime)+4;
+    }
+    // Title
+    doc.setTextColor(26,32,44);doc.setFontSize(9.5);doc.setFont("helvetica","normal");
+    const maxW=CW-tx+M-4;
+    const titleLines=doc.splitTextToSize(t.title,maxW);
+    doc.text(titleLines[0],tx,y2+6);
+    y2+=10;
+    if(t.notes){
+      if(y2>272){doc.addPage();y2=M;}
+      doc.setFontSize(8);doc.setTextColor(113,128,150);
+      doc.text("   "+t.notes.slice(0,90),M+6,y2);y2+=5;
+    }
+    return y2;
+  };
+
+  const drawSection=(label,color,tasks2)=>{
+    if(!tasks2.length)return;
+    if(y>260){doc.addPage();y=M;}
+    const rgb=hxr(color);
+    doc.setFillColor(rgb.r,rgb.g,rgb.b);doc.setTextColor(255,255,255);
+    doc.setFontSize(10);doc.setFont("helvetica","bold");
+    doc.rect(M,y,CW,8,"F");doc.text(label,M+3,y+5.5);y+=10;
+    tasks2.forEach(t=>{y=drawTask(t,y,false);});y+=3;
+  };
+
+  const pending=tasks.filter(t=>!t.done);
+  if(pdfOpt==="day"){
+    // Today's tasks sorted by priority
+    const tk=todayKey();
+    const todayTasks=pending.filter(t=>t.scheduledDate===tk);
+    const urgent=pending.filter(t=>!t.scheduledDate&&t.quadrant==="Q1");
+    const all=[...todayTasks,...urgent].sort((a,b)=>{
+      const qa=Q[a.quadrant]?.order||5,qb=Q[b.quadrant]?.order||5;
+      if(qa!==qb)return qa-qb;
+      return (a.scheduledTime||"99:99")>(b.scheduledTime||"99:99")?1:-1;
+    });
+    if(!all.length){doc.setFontSize(12);doc.setTextColor(113,128,150);doc.text("Aucune tâche prévue aujourd'hui.",M,y);}
+    else{["Q1","Q2","Q3","Q4"].forEach(k=>{const qt=all.filter(t=>t.quadrant===k);if(qt.length)drawSection(Q[k].label+" — "+Q[k].desc,Q[k].color,qt);});}
+  }else if(pdfOpt==="week"){
+    ["Q1","Q2","Q3","Q4"].forEach(k=>{const qt=pending.filter(t=>t.quadrant===k);if(qt.length)drawSection(Q[k].label,Q[k].color,qt);});
+    const done=tasks.filter(t=>t.done);
+    if(done.length)drawSection("Terminees","#38A169",done.slice(0,10));
+  }else{
+    const done=tasks.filter(t=>t.done);
+    drawSection("A faire ("+pending.length+")","#1A202C",pending);
+    if(done.length)drawSection("Terminees ("+done.length+")","#38A169",done);
+  }
+
+  // Footer
+  const pages=doc.internal.getNumberOfPages();
+  for(let i=1;i<=pages;i++){
+    doc.setPage(i);doc.setFontSize(8);doc.setTextColor(160,174,192);doc.setFont("helvetica","normal");
+    doc.text("Mon Assistant · "+today.toLocaleDateString("fr-FR"),M,290);
+    doc.text("Page "+i+"/"+pages,W-M-16,290);
+    doc.setDrawColor(226,232,240);doc.line(M,287,W-M,287);
+  }
+  doc.save({day:"planning-jour",week:"planning-semaine",full:"toutes-taches"}[pdfOpt]+"-"+today.toISOString().slice(0,10)+".pdf");
+  document.getElementById("pdfModal").style.display="none";
+}
+
+// ===== BILAN =====
+function getBilans(){try{return JSON.parse(localStorage.getItem("dj_b6")||"[]");}catch{return[];}}
+function saveBilans(arr){try{localStorage.setItem("dj_b6",JSON.stringify(arr));}catch{}}
+function setBV(key,val){
+  bilan[key]=val;
+  if(key==="accompli"){document.getElementById("bAccOui").className="bilan-btn"+(val===true?" yes":"");document.getElementById("bAccNon").className="bilan-btn"+(val===false?" no":"");}
+  if(key==="sucre"){document.getElementById("bSucOui").className="bilan-btn"+(val===true?" no":"");document.getElementById("bSucNon").className="bilan-btn"+(val===false?" yes":"");}
+  if(key==="energie"){for(let i=1;i<=5;i++){const b=document.getElementById("be"+i);if(b)b.className="energy-btn"+(i===val?" active":"");}}
+}
+function loadBilan(){
+  bilan={accompli:null,energie:null,sucre:null};
+  ["bAccOui","bAccNon","bSucOui","bSucNon"].forEach(id=>{const el=document.getElementById(id);if(el)el.className="bilan-btn";});
+  for(let i=1;i<=5;i++){const b=document.getElementById("be"+i);if(b)b.className="energy-btn";}
+  const n=document.getElementById("bilanNote");if(n)n.value="";
+  const ai=document.getElementById("bilanAIResult");if(ai)ai.innerHTML="";
+  renderBilanHisto();
+}
+async function saveBilan(){
+  if(bilan.accompli===null||bilan.energie===null||bilan.sucre===null){alert("Réponds aux 3 premières questions.");return;}
+  const btn=document.getElementById("btnSaveBilan");btn.disabled=true;btn.textContent="⏳ Analyse...";
+  const entry={date:todayKey(),dateLabel:new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"}),accompli:bilan.accompli,energie:bilan.energie,sucre:bilan.sucre,note:(document.getElementById("bilanNote")||{}).value||"",tasksDone:tasks.filter(t=>t.done).length};
+  const bilans=getBilans();const idx=bilans.findIndex(b=>b.date===entry.date);
+  if(idx>=0)bilans[idx]=entry;else bilans.push(entry);
+  saveBilans(bilans);
+  const el=document.getElementById("bilanAIResult");el.innerHTML="";
+  try{
+    const last7=bilans.slice(-7);
+    const snA=last7.filter(b=>!b.accompli&&b.sucre).length;
+    const saA=last7.filter(b=>b.accompli&&b.sucre).length;
+    const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:350,messages:[{role:"user",content:"Coach bienveillant pour Djamila (auto-entrepreneuse, SIIK et TopFind). Elle compense par du sucre les soirs peu productifs.\n\nBilan: accompli="+(entry.accompli?"OUI":"NON")+", énergie="+entry.energie+"/5, sucre="+(entry.sucre?"OUI":"NON")+", note="+(entry.note||"aucune")+", tâches finies="+entry.tasksDone+"\nHistorique 7j: sans accompl.+sucre="+snA+", avec accompl.+sucre="+saA+"\n\n3 parties: 1.🔍 Observation ce soir (1-2 phrases) 2.💡 Geste concret dans 30min 3.🌱 Encouragement court. Max 120 mots."}]})});
+    if(!res.ok)throw new Error("HTTP "+res.status);
+    const data=await res.json();
+    el.innerHTML='<div style="background:linear-gradient(135deg,#667eea11,#764ba211);border:1.5px solid #667eea55;border-radius:10px;padding:14px;margin-bottom:12px"><div style="font-size:12px;font-weight:700;color:#667eea;margin-bottom:8px">✨ Analyse personnalisée</div><div style="font-size:13px;line-height:1.7;color:#2D3748;white-space:pre-wrap">'+esc(data.content?.[0]?.text||"")+'</div></div>';
+  }catch(e){el.innerHTML='<div style="color:#975A16;font-size:13px;padding:12px;background:#FFFFF0;border-radius:10px;border:1.5px solid #F6E05E;margin-bottom:10px">⏳ L\'analyse IA sera disponible à partir du 28 juin. Ton bilan est bien enregistré et sera analysé dès la réactivation.</div>';}
+  renderBilanHisto();
+  btn.disabled=false;btn.textContent="Enregistrer mon bilan";
+}
+function renderBilanHisto(){
+  const bilans=getBilans().slice(-14).reverse();
+  const el=document.getElementById("bilanHistorique");if(!el)return;
+  if(!bilans.length){el.innerHTML='<div style="text-align:center;padding:20px;color:#A0AEC0;font-size:13px">Aucun bilan encore. Complète ton premier ce soir 🌙</div>';return;}
+  const total=bilans.length;
+  const jNA=bilans.filter(b=>!b.accompli),jA=bilans.filter(b=>b.accompli);
+  const pNA=jNA.length?Math.round(jNA.filter(b=>b.sucre).length/jNA.length*100):0;
+  const pA=jA.length?Math.round(jA.filter(b=>b.sucre).length/jA.length*100):0;
+  const avg=(bilans.reduce((s,b)=>s+b.energie,0)/total).toFixed(1);
+  let h='<div class="corr-block"><div style="font-size:13px;font-weight:700;color:#2D3748;margin-bottom:8px">📊 Corrélations ('+total+' bilan'+(total>1?"s":"")+')</div>';
+  h+='<div style="font-size:12px;color:#718096;line-height:1.9">Jours <strong>sans accomplissement</strong> → sucre : <strong style="color:#E53E3E">'+pNA+'%</strong><br>Jours <strong>avec accomplissement</strong> → sucre : <strong style="color:#38A169">'+pA+'%</strong><br>Énergie moyenne : <strong style="color:#667eea">'+avg+'/5</strong></div>';
+  if(total>=3){const diff=pNA-pA;if(diff>20)h+='<div style="background:#FFF5F5;border-radius:8px;padding:10px;margin-top:8px;font-size:12px;color:#C53030;font-weight:600">⚠️ Pattern confirmé : journées peu productives → '+diff+'% plus d\'envies sucrées.</div>';else if(diff>0)h+='<div style="background:#FFFFF0;border-radius:8px;padding:10px;margin-top:8px;font-size:12px;color:#975A16">📈 Tendance : journées productives = moins d\'envies. Continue.</div>';else h+='<div style="background:#F0FFF4;border-radius:8px;padding:10px;margin-top:8px;font-size:12px;color:#276749">✅ Tes envies semblent indépendantes de ta productivité.</div>';}
+  h+='</div><div class="section-title">Historique récent</div>';
+  const ei=["","😴","😔","😐","😊","🤩"];
+  bilans.forEach(b=>{h+='<div class="bilan-entry"><div class="bilan-entry-date">'+b.dateLabel+'</div><div class="bilan-badges"><span class="bb" style="background:'+(b.accompli?"#38A16922":"#E53E3E22")+';color:'+(b.accompli?"#276749":"#C53030")+'">'+(b.accompli?"✅ Accomplie":"❌ Difficile")+'</span><span class="bb" style="background:#EBF8FF;color:#2B6CB0">'+ei[b.energie]+' '+b.energie+'/5</span><span class="bb" style="background:'+(b.sucre?"#E53E3E22":"#38A16922")+';color:'+(b.sucre?"#C53030":"#276749")+'">'+(b.sucre?"🍬 Sucre":"💪 Sans envie")+'</span>'+(b.tasksDone?'<span class="bb" style="background:#F0FFF4;color:#276749">✓ '+b.tasksDone+'</span>':"")+'</div>'+(b.note?'<div style="font-size:11px;color:#718096;margin-top:4px;font-style:italic">"'+esc(b.note)+'"</div>':"")+' </div>';});
+  el.innerHTML=h;
+}
+
+// ===== JAPANESE =====
+function renderJP(){
+  const el=document.getElementById("jpProgress");el.innerHTML="";
+  METHODS.forEach(m=>{
+    const active=jp.activeMethod===m.id;
+    const div=document.createElement("div");div.className="jp-prog-item"+(active?" active":"");
+    div.onclick=()=>{jp.activeMethod=m.id;save();renderJP();};
+    div.innerHTML='<div class="jp-prog-dot" style="background:'+(active?m.color:"#F0F2F7")+';border-color:'+(active?m.color:m.color+"55")+'">'+m.emoji+'</div><div class="jp-prog-label">'+m.name+'</div>';
+    el.appendChild(div);
+  });
+  renderJPMethod();
+}
+function renderJPMethod(){
+  const el=document.getElementById("methodsContainer");el.innerHTML="";
+  const m=METHODS.find(x=>x.id===jp.activeMethod);if(!m)return;
+  const tab=jp.tab[m.id]||"comprendre";
+  let h='<div class="method-card"><div class="method-banner" style="background:'+m.gradient+'"><div class="method-kanji">'+m.kanji+'</div><div class="method-tag">'+m.emoji+' Philosophie japonaise</div><div class="method-name">'+m.name+'</div><div class="method-tagline">'+m.tagline+'</div></div><div class="method-body"><div class="method-tabs"><button class="mtab'+(tab==="comprendre"?" active":"")+'" onclick="setMTab(\''+m.id+'\',\'comprendre\')">📖 Comprendre</button><button class="mtab'+(tab==="pratiquer"?" active":"")+'" onclick="setMTab(\''+m.id+'\',\'pratiquer\')">✍️ Pratiquer</button></div>';
+  h+=tab==="comprendre"?'<div class="method-what">'+m.what+'</div>'+mVis(m):mEx(m);
+  h+="</div></div>";el.innerHTML=h;
+  if(m.id==="pomodoro")initPom();
+}
+function setMTab(mid,t){jp.tab[mid]=t;renderJP();}
+
+function mVis(m){
+  if(m.id==="ikigai"){const a=jp.iki;return'<div class="ikigai-grid"><div class="iki-circle" style="background:#FFF5F5;border-color:#FC8181"><div class="iki-icon">❤️</div><div class="iki-title" style="color:#E53E3E">Ce que tu aimes</div><div class="iki-q">'+(a.love?esc(a.love):"Qu'est-ce qui te fait vibrer ?")+'</div></div><div class="iki-circle" style="background:#F0FFF4;border-color:#9AE6B4"><div class="iki-icon">⭐</div><div class="iki-title" style="color:#38A169">Tes talents</div><div class="iki-q">'+(a.good?esc(a.good):"Tes forces ?")+'</div></div><div class="iki-circle" style="background:#EBF8FF;border-color:#63B3ED"><div class="iki-icon">🌍</div><div class="iki-title" style="color:#2B6CB0">Besoin du monde</div><div class="iki-q">'+(a.need?esc(a.need):"Quel problème tu résous ?")+'</div></div><div class="iki-circle" style="background:#FFFFF0;border-color:#F6E05E"><div class="iki-icon">💰</div><div class="iki-title" style="color:#D69E2E">Ce pour quoi on te paie</div><div class="iki-q">'+(a.paid?esc(a.paid):"Tes revenus ?")+'</div></div><div class="iki-center"><div style="font-size:18px;margin-bottom:3px">🌸</div><div style="font-weight:800;color:#667eea;font-size:13px">TON IKIGAI</div><div style="font-size:11px;color:#718096;margin-top:2px">'+(a.love&&a.good&&a.need&&a.paid?"→ Pratiquer pour l'analyse IA":"Complète les 4 quadrants")+'</div></div></div>';}
+  if(m.id==="kaizen")return'<div style="background:#F0FFF4;border:1.5px solid #9AE6B4;border-radius:9px;padding:12px"><div style="font-weight:700;color:#276749;margin-bottom:4px">📐 La règle des 1%</div><div style="font-size:12px;color:#4A5568;line-height:1.6">1% d\'amélioration chaque jour = <strong>37x mieux en 1 an</strong>.</div></div>';
+  if(m.id==="pomodoro")return'<div style="background:#FFF5F5;border:1.5px solid #FC8181;border-radius:9px;padding:12px"><div style="font-weight:700;color:#C53030;margin-bottom:4px">⏱️ La méthode</div><div style="font-size:12px;color:#4A5568;line-height:1.8"><strong>1.</strong> Choisis UNE tâche<br><strong>2.</strong> 25min focus total<br><strong>3.</strong> 5min pause<br><strong>4.</strong> Après 4 sessions → pause longue</div></div>';
+  if(m.id==="wabi")return'<div style="background:#FFFFF0;border:1.5px solid #F6E05E;border-radius:9px;padding:12px"><div style="font-weight:700;color:#975A16;margin-bottom:4px">🍂 Le paradoxe</div><div style="font-size:12px;color:#4A5568;line-height:1.6">Publier imparfait > Garder parfait dans un tiroir.</div></div>';
+  if(m.id==="hara")return'<div>'+Object.entries(jp.haru).map(([k,v])=>{const col=v.v>80?"#E53E3E":v.v>60?"#38A169":"#667eea";return'<div class="haru-m"><div class="haru-ml"><span>'+v.icon+' '+v.name+'</span><span style="font-weight:700;color:'+col+'">'+v.v+'%</span></div><div class="haru-mt"><div class="haru-mf" style="width:'+v.v+'%;background:'+col+'"></div></div></div>';}).join('')+'<div style="font-size:11px;color:#A0AEC0;margin-top:6px;font-style:italic">Zone optimale : 60–80%</div></div>';
+  return"";
+}
+
+function mEx(m){
+  if(m.id==="ikigai"){const a=jp.iki;return'<div><div class="ex-block"><div class="ex-q">❤️ Ce que tu aimes faire</div><textarea class="ex-ta" id="iki-love">'+a.love+'</textarea></div><div class="ex-block"><div class="ex-q">⭐ Ce en quoi tu es douée</div><textarea class="ex-ta" id="iki-good">'+a.good+'</textarea></div><div class="ex-block"><div class="ex-q">🌍 Ce dont le monde a besoin</div><textarea class="ex-ta" id="iki-need">'+a.need+'</textarea></div><div class="ex-block"><div class="ex-q">💰 Ce pour quoi on peut te payer</div><textarea class="ex-ta" id="iki-paid">'+a.paid+'</textarea></div><button class="btn-reflect" id="btnIki" onclick="analyzeIki()">✨ Analyser mon Ikigai</button><div id="ikiResult"></div></div>';}
+  if(m.id==="kaizen"){
+    const today=todayKey();
+    let h='<div style="font-size:12px;color:#718096;margin-bottom:10px">Coche chaque habitude accomplie aujourd\'hui.</div>';
+    jp.habits.forEach(hb=>{const done=hb.days.includes(today),streak=calcStreak(hb.days);h+='<div class="kz-habit"><div style="flex:1"><div style="font-size:13px;font-weight:700;color:#2D3748;margin-bottom:2px">'+esc(hb.name)+'</div><div style="font-size:11px;color:#718096">'+esc(hb.desc)+'</div><div class="kz-days">'+getLast7(hb.days)+'</div></div><div style="text-align:center;flex-shrink:0"><div style="font-size:20px;font-weight:900;color:#667eea">'+streak+'</div><div style="font-size:9px;color:#A0AEC0;font-weight:600">🔥 jours</div><div style="margin-top:6px"><button onclick="toggleHabit(\''+hb.id+'\')" style="padding:5px 11px;border-radius:7px;border:2px solid;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;background:'+(done?"#38A169":"#fff")+';border-color:'+(done?"#38A169":"#E2E8F0")+';color:'+(done?"#fff":"#718096")+'">'+(done?"✓ Fait":"Faire")+'</button></div></div></div>';});
+    h+='<div style="margin-top:10px;padding:11px;background:#F0FFF4;border-radius:9px;border:1.5px solid #9AE6B4"><div style="font-size:12px;font-weight:700;color:#276749;margin-bottom:7px">➕ Nouvelle habitude</div><input class="form-input" id="newHN" placeholder="Nom" style="margin-bottom:7px"/><input class="form-input" id="newHD" placeholder="Description"/><button onclick="addHabit()" style="width:100%;padding:9px;background:#38A169;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:8px">Ajouter</button></div>';
+    return h;
+  }
+  if(m.id==="pomodoro")return'<div style="text-align:center;padding:14px 0"><div class="pom-ring" id="pomRing"><div class="pom-time" id="pomTime">25:00</div><div class="pom-label" id="pomLabel">🍅 Focus</div></div><div class="pom-btns"><button class="pom-btn pom-start" id="pomStart" onclick="togglePom()">▶ Démarrer</button><button class="pom-btn pom-reset" onclick="resetPom()">↺ Reset</button></div><div class="pom-sess" id="pomSess"></div><div style="margin-top:14px;padding:12px;background:#FFF5F5;border-radius:9px;border:1.5px solid #FC8181"><div style="font-weight:700;color:#C53030;margin-bottom:6px;font-size:13px">📝 Tâche de ce pomodoro</div><input class="form-input" id="pomTask" placeholder="Sur quoi tu travailles ?"/></div></div>';
+  if(m.id==="wabi"){const entries=jp.wabi.slice(-5).reverse();return'<div><div class="ex-block"><div class="ex-q">🍂 Journal wabi-sabi du jour</div><div class="ex-hint">Qu\'est-ce qui ne s\'est pas passé comme prévu ?</div><textarea class="ex-ta" id="wabiTxt" rows="4" placeholder="Aujourd\'hui j\'avais prévu... mais..."></textarea><button class="btn-reflect" onclick="saveWabi()">Sauvegarder</button>&nbsp;<button class="btn-reflect" style="background:linear-gradient(135deg,#975A16,#D69E2E)" onclick="analyzeWabi()">✨ Perspective IA</button><div id="wabiRes"></div></div>'+(entries.length?'<div class="section-title">Tes dernières réflexions</div>'+entries.map(e=>'<div class="wabi-entry"><div style="font-size:10px;color:#D69E2E;font-weight:700;margin-bottom:3px">'+e.date+'</div><div style="font-size:12px;color:#4A5568;line-height:1.5">'+esc(e.text)+'</div></div>').join(""):"")+'</div>';}
+  if(m.id==="hara"){let h='<div style="font-size:12px;color:#4A5568;margin-bottom:12px;line-height:1.6">Zone idéale : <strong>60–80%</strong>.</div>';Object.entries(jp.haru).forEach(([k,d])=>{const col=d.v>80?"#E53E3E":d.v>60?"#38A169":"#667eea";h+='<div style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;margin-bottom:4px"><span>'+d.icon+' '+d.name+'</span><span style="color:'+col+'">'+d.v+'%</span></div><input type="range" min="0" max="100" value="'+d.v+'" oninput="updateHaru(\''+k+'\',this.value)" style="width:100%;accent-color:'+col+'"></div>';});h+='<button class="btn-reflect" onclick="analyzeHaru()">✨ Analyse IA</button><div id="haruRes"></div>';return h;}
+  return"";
+}
+
+function getLast7(days){let h="";for(let i=6;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);const key=d.toISOString().slice(0,10),done=days.includes(key),label=DFR[d.getDay()][0];h+='<div class="kz-day'+(done?" done":"")+'">'+(done?"✓":label)+'</div>';}return h;}
+function calcStreak(days){if(!days.length)return 0;const s=[...days].sort().reverse();let n=0,d=new Date();for(const day of s){if(day===d.toISOString().slice(0,10)){n++;d.setDate(d.getDate()-1);}else break;}return n;}
+function toggleHabit(id){const today=todayKey();jp.habits=jp.habits.map(h=>{if(h.id!==id)return h;const days=h.days.includes(today)?h.days.filter(d=>d!==today):[...h.days,today];return Object.assign({},h,{days});});save();renderJP();}
+function addHabit(){const name=(document.getElementById("newHN")||{}).value||"";if(!name.trim())return;jp.habits.push({id:"h"+Date.now(),name:name.trim(),desc:((document.getElementById("newHD")||{}).value||"").trim(),days:[]});save();renderJP();}
+
+function initPom(){updatePomUI();}
+function updatePomUI(){const p=jp.pom;const t=document.getElementById("pomTime");if(t)t.textContent=Math.floor(p.sec/60).toString().padStart(2,"0")+":"+(p.sec%60).toString().padStart(2,"0");const r=document.getElementById("pomRing");if(r)r.className="pom-ring"+(p.work?" work":" brk");const l=document.getElementById("pomLabel");if(l)l.textContent=p.work?"🍅 Focus":"☕ Pause";const s=document.getElementById("pomStart");if(s)s.textContent=p.running?"⏸ Pause":"▶ Démarrer";const ss=document.getElementById("pomSess");if(ss)ss.innerHTML=Array.from({length:4},(_,i)=>'<div class="pom-t'+(i<p.sess?" done":"")+'">🍅</div>').join("");}
+function togglePom(){const p=jp.pom;if(p.running){clearInterval(p.iv);p.iv=null;p.running=false;}else{p.running=true;p.iv=setInterval(()=>{p.sec--;if(p.sec<=0){if(p.work){p.sess++;p.work=false;p.sec=5*60;}else{p.work=true;p.sec=25*60;if(p.sess>=4)p.sess=0;}}updatePomUI();},1000);}updatePomUI();}
+function resetPom(){const p=jp.pom;clearInterval(p.iv);p.iv=null;p.running=false;p.work=true;p.sec=25*60;updatePomUI();}
+
+function saveWabi(){const text=(document.getElementById("wabiTxt")||{}).value||"";if(!text.trim())return;jp.wabi.push({date:new Date().toLocaleDateString("fr-FR",{day:"numeric",month:"long"}),text:text.trim()});if(jp.wabi.length>20)jp.wabi=jp.wabi.slice(-20);save();document.getElementById("wabiTxt").value="";renderJP();}
+async function analyzeWabi(){const text=(document.getElementById("wabiTxt")||{}).value||"";if(!text.trim())return;const btn=document.querySelectorAll(".btn-reflect")[1];if(btn){btn.disabled=true;btn.textContent="⏳...";}try{const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:300,messages:[{role:"user",content:"Coach bienveillant. Djamila partage:\n\""+text+"\"\n3-4 phrases: 1.Valide l'imperfection 2.Recadrage positif 3.Question ouverte. Direct, pas de flatterie."}]})});const data=await res.json();document.getElementById("wabiRes").innerHTML='<div class="ai-fb">'+esc(data.content?.[0]?.text||"")+'</div>';}catch(e){document.getElementById("wabiRes").innerHTML='<div style="color:#E53E3E;font-size:12px">Erreur IA.</div>';}if(btn){btn.disabled=false;btn.textContent="✨ Perspective IA";}}
+
+function updateHaru(k,v){jp.haru[k].v=parseInt(v);save();const el=document.getElementById("haruRes");if(el)el.innerHTML="";renderJP();}
+async function analyzeHaru(){const btn=document.getElementById("btnHaruAI")||document.querySelector(".btn-reflect");if(btn){btn.disabled=true;btn.textContent="⏳...";}const domains=Object.entries(jp.haru).map(([k,d])=>d.name+": "+d.v+"%").join(", ");try{const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:400,messages:[{role:"user",content:"Coach de vie. Djamila (SIIK et TopFind): "+domains+"\n1.Surcharges>80% 2.Négligés<50% 3.Action cette semaine 4.Encouragement. Direct, pratique."}]})});const data=await res.json();const el=document.getElementById("haruRes");if(el)el.innerHTML='<div class="ai-fb">'+esc(data.content?.[0]?.text||"")+'</div>';}catch(e){const el=document.getElementById("haruRes");if(el)el.innerHTML='<div style="color:#E53E3E;font-size:12px">Erreur IA.</div>';}if(btn){btn.disabled=false;btn.textContent="✨ Analyse IA";}}
+
+async function analyzeIki(){const love=(document.getElementById("iki-love")||{}).value||"",good=(document.getElementById("iki-good")||{}).value||"",need=(document.getElementById("iki-need")||{}).value||"",paid=(document.getElementById("iki-paid")||{}).value||"";jp.iki={love,good,need,paid};save();if(!love||!good||!need||!paid){document.getElementById("ikiResult").innerHTML='<div style="color:#E53E3E;font-size:12px;margin-top:7px">Remplis les 4 champs.</div>';return;}const btn=document.getElementById("btnIki");btn.disabled=true;btn.textContent="⏳...";try{const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:500,messages:[{role:"user",content:"Coach Ikigai. Djamila, auto-entrepreneuse Île-de-France, 50ans, SIIK et TopFind.\nAime: "+love+"\nDouée: "+good+"\nMonde: "+need+"\nRevenus: "+paid+"\n5 points: 1.Son ikigai probable 2.Intersections fortes 3.Ce qui manque 4.SIIK et TopFind dans son ikigai 5.Question puissante. Spécifique."}]})});const data=await res.json();document.getElementById("ikiResult").innerHTML='<div class="ai-fb">'+esc(data.content?.[0]?.text||"")+'</div>';}catch(e){document.getElementById("ikiResult").innerHTML='<div style="color:#E53E3E;font-size:12px">Erreur IA.</div>';}btn.disabled=false;btn.textContent="✨ Analyser mon Ikigai";}
+
+// ===== MODAL CLOSE =====
+["taskModal","planModal","pdfModal","schedModal"].forEach(id=>{document.getElementById(id).addEventListener("click",e=>{if(e.target===e.currentTarget)document.getElementById(id).style.display="none";});});
+
+// ===== SERVICE WORKER — UNREGISTER OLD =====
+if("serviceWorker" in navigator){navigator.serviceWorker.getRegistrations().then(regs=>regs.forEach(r=>r.unregister()));}
+
+// ===== INIT =====
+renderAll();
+</script>
+</body>
+</html>
